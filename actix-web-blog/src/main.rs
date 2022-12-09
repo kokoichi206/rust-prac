@@ -6,6 +6,8 @@ use actix_web::{web, App, HttpResponse, HttpServer};
 use error::ApiError;
 use repository::{NewPost, Repository};
 
+use actix_web::middleware::{Logger, NormalizePath};
+
 #[actix_web::post("/posts")]
 async fn create_post(
     repo: web::Data<Repository>,
@@ -34,12 +36,16 @@ async fn get_post(
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    tracing_subscriber::fmt::init();
+
     let database_url = std::env::var("DATABASE_URL").unwrap();
     let repo = web::Data::new(Repository::new(&database_url));
 
     HttpServer::new(move || {
         App::new()
             .app_data(repo.clone())
+            .wrap(Logger::default())
+            .wrap(NormalizePath::trim()) // Trailing slash 等に対応
             .service(create_post)
             .service(list_posts)
             .service(get_post)

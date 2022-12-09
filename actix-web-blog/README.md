@@ -38,7 +38,16 @@ cargo make --env-file .env watch
 curl -X POST 'http://localhost:8080/posts' -H 'Content-Type: application/json' -d '{"title": "Hello", "body": "my first time"}'
 
 curl 'http://localhost:8080/posts'
+curl 'http://localhost:8080/posts/'
 
 curl 'http://localhost:8080/posts/1'
 curl 'http://localhost:8080/posts/1000' -o /dev/null -w '%{http_code}\n' -s
+```
+
+### Logging 等
+
+ログ出力用のクレートとして、tracing を使う。
+
+```sh
+cargo add tracing tracing-subscriber
 ```
