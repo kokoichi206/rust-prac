@@ -16,3 +16,16 @@ sqlite > .schema posts
 # cargo-make では --env-file で環境変数に追加してくれる
 cargo make --env-file .env run
 ```
+
+## Dependencies
+
+追加するクレート
+
+- libsqlite3-sys: SQLite3 接続用
+- anyhow, thiserror: エラーを簡単に扱うため
+
+```sh
+cargo add actix-web
+cargo add serde -F derive
+cargo add diesel -F r2d2 -F sqlite -F returning_clauses_for_sqlite_3_35
+```
