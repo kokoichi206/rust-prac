@@ -7,5 +7,8 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.2.1"
+anyhow = "1.0.66"
 diesel = { version = "2.0.2", features = ["r2d2", "sqlite", "returning_clauses_for_sqlite_3_35"] }
+libsqlite3-sys = { version = "0.25.2", features = ["bundled"] }
 serde = { version = "1.0.149", features = ["derive"] }
+thiserror = "1.0.37"

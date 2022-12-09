@@ -28,4 +28,12 @@ cargo make --env-file .env run
 cargo add actix-web
 cargo add serde -F derive
 cargo add diesel -F r2d2 -F sqlite -F returning_clauses_for_sqlite_3_35
+cargo add libsqlite3-sys -F bundled
+cargo add anyhow thiserror
+```
+
+```sh
+cargo make --env-file .env watch
+
+curl -X POST 'http://localhost:8080/posts' -H 'Content-Type: application/json' -d '{"title": "Hello", "body": "my first time"}'
 ```
