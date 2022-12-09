@@ -73,3 +73,9 @@ test を実際に書くときは、cfg, mod などとして、テスト時以外
 [特別扱いされるディレクトリ: Package Layout](https://doc.rust-lang.org/cargo/guide/project-layout.html)
 
 - rust-analyzer は必須！
+
+### web 開発の部分
+
+`?` の文字は、Rust のエラー処理の糖衣構文。  
+`Result<T, E>` を返す型に対し、失敗時は ? でリターンし、成功時は中身を取り出す、という動作をする。
+
