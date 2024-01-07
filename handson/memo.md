@@ -33,3 +33,25 @@
   - Python のラムダ式みたいなもん
 - 可変配列
   - ベクター？
+- expect, unwrap でエラー処理を簡略化することも可能だが、その場合は強制終了される
+- Option 型
+  - Some
+  - None
+- イテレータから直接データを取得することはできない
+  - for 文などとの組み合わせが必要
+  - Vector 型としておくと便利なことが！
+
+## cargo
+
+- パッケージマネージャーの機能も持つ
+  - pip, npm
+- ライブラリー（クレート）の管理
+  - ライブラリ一覧
+    - https://crates.io/
+
+``` sh
+cargo --help
+
+cargo new hi
+cargo run
+```
