@@ -172,6 +172,21 @@ cargo doc
 - 手続的マクロ: procedural macro
   - 構造体に属性を与えた時に追加されるようなもの
 
+## パーサージェネレーター
+
+parser generator
+
+- 文法を定義しておくと、その定義を元にコンパイラーを生成するツール
+- コンパイラーを作成するコンパイラー
+  - **コンパイラーコンパイラー**
+- yacc など
+- rust で著名なパーサージェネレーター
+  - nom
+  - lalprop
+  - combine
+  - peg
+- PEG: Parsing Expression Grammar
+
 ## 疑問
 
 - 参照（ポインター）を渡すこと → 所有権の借用との繋がりがわかってない
