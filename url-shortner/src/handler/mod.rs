@@ -1,7 +1,7 @@
-use actix_web::{web, App, HttpServer};
-
 pub mod health;
-use crate::di;
+
+use super::di;
+use actix_web::{web, App, HttpServer};
 
 #[actix_web::main]
 pub async fn run(app_module: di::AppModule, addr: String) -> std::io::Result<()> {

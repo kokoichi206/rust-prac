@@ -1,23 +1,27 @@
-use crate::repository::sqlite;
 use crate::usecase;
+
+use std::error::Error;
 use std::sync::Arc;
+
+use super::repository::sqlite;
+use super::usecase::Usecase;
 
 #[derive(Clone)]
 pub struct AppModule {
-    ucase: Arc<dyn usecase::Usecase>,
+    ucase: Arc<dyn Usecase>,
 }
 
 impl AppModule {
-    pub fn new() -> AppModule {
-        let database = sqlite::Database;
-        let usecase = usecase::main::UsecaseImpl::new(Arc::new(database));
+    pub fn new() -> Result<AppModule, Box<dyn Error>> {
+        let database = sqlite::Database::new()?;
+        let ucase = usecase::main::UsecaseImpl::new(Arc::new(database));
 
-        AppModule {
-            ucase: Arc::new(usecase),
-        }
+        Ok(AppModule {
+            ucase: Arc::new(ucase),
+        })
     }
 
-    pub fn static_usecase(&self) -> &Arc<dyn usecase::Usecase> {
+    pub fn static_usecase(&self) -> &Arc<dyn Usecase> {
         &self.ucase
     }
 }

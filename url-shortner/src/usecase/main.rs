@@ -1,7 +1,6 @@
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
 
 use crate::repository;
-use crate::usecase;
 
 pub struct UsecaseImpl {
     repository: Arc<dyn repository::Repository>,
@@ -13,8 +12,8 @@ impl UsecaseImpl {
     }
 }
 
-impl usecase::Usecase for UsecaseImpl {
-    fn health(&self) -> Result<(), String> {
+impl super::Usecase for UsecaseImpl {
+    fn health(&self) -> Result<(), Box<dyn Error>> {
         self.repository.health()
     }
 }
