@@ -8,11 +8,13 @@ struct HealthStatus {
 
 pub async fn get_original_url(
     path: Path<String>,
-    app_module: Data<crate::di::AppModule>,
+    // app_module: Data<crate::di::AppModule>,
+    ucase: Data<impl crate::usecase::Usecase>,
 ) -> Result<HttpResponse, Error> {
     // path: https://actix.rs/docs/extractors/#path
     let short_url = path.into_inner();
-    match app_module.static_usecase().search_original_url(short_url) {
+    // match app_module.static_usecase().search_original_url(short_url) {
+    match ucase.search_original_url(short_url).await {
         Ok(url) => {
             return Ok(HttpResponse::PermanentRedirect()
                 .append_header(("Location", url))

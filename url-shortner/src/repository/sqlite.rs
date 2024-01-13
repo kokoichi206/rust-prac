@@ -7,6 +7,7 @@ use tokio_postgres::{Client, NoTls};
 // use postgres::{Client, NoTls};
 use std::sync::Mutex;
 
+#[derive(Clone)]
 pub struct Database {
     client: Arc<Mutex<Client>>,
     // client: Arc<Client>,
@@ -86,7 +87,8 @@ impl super::Repository for Database {
     // fn health(&self) -> impl Sized + Send + Future<Output = Result<(), Box<dyn Error>>> {
     // fn health(&self) -> Result<(), Box<dyn Error>> {
 
-    fn health(&self) -> impl Sized + Send + Future<Output = Result<(), Box<dyn Error>>> {
+    // fn health(&self) -> impl Sized + Send + Future<Output = Result<(), Box<dyn Error>>> {
+    async fn health(&self) -> Result<(), Box<dyn Error>> {
         // async fn health(&self) -> Result<(), Box<dyn Error>> {
         // let client = self.client.lock().unwrap();
 
@@ -123,10 +125,10 @@ impl super::Repository for Database {
         // let mut client = self.client.lock().unwrap();
         // let result = client.query("SELECT 1", &[])?;
 
-        let client = self.client.lock().unwrap();
         // let result = client.query("SELECT 1", &[]).await?;
 
         async {
+            let client = self.client.lock().unwrap();
             let result = Box::new(client.query("SELECT 1", &[]).await?);
 
             if let Some(row) = result.get(0) {
@@ -138,8 +140,9 @@ impl super::Repository for Database {
                 }
             } else {
                 Err("No rows returned from database".into())
-            }    
+            }
         }
+        .await
 
         // rt.block_on(async {
         //     // let lock = self.client.lock();
@@ -163,11 +166,11 @@ impl super::Repository for Database {
         // })
     }
 
-    fn search_url_from_short_url(
+    async fn search_url_from_short_url(
         &self,
         short_url: String,
-    ) -> impl Sized + Send + Future<Output = Result<String, Box<dyn Error>>> {
-
+        // ) -> impl Sized + Send + Future<Output = Result<String, Box<dyn Error>>> {
+    ) -> Result<String, Box<dyn Error>> {
         // async fn search_url_from_short_url(&self, short_url: String) -> Result<String, Box<dyn Error>> {
         // let client = self.client.clone();
 
@@ -180,16 +183,17 @@ impl super::Repository for Database {
 
         // let rows = client.query(SEARCH_URL_FROM_SHORT_URL_STMT, &[&short_url])?;
 
-        let mut client = self.client.lock().unwrap();
         // let rows = client.query(SEARCH_URL_FROM_SHORT_URL_STMT, &[&short_url]).await?;
-        
-        async {
+
+        // let su = &short_url;
+        async move {
+            let client = self.client.lock().unwrap();
             let rows = Box::new(
                 client
                     .query(SEARCH_URL_FROM_SHORT_URL_STMT, &[&short_url])
                     .await?,
             );
-    
+
             if rows.len() == 1 {
                 if let Some(row) = rows.get(0) {
                     let url: String = row.get(0);
@@ -200,6 +204,7 @@ impl super::Repository for Database {
                 Err("Unexpected row counts".into())
             }
         }
+        .await
 
         // let rt = tokio::runtime::Runtime::new().unwrap();
         // rt.block_on(async {
