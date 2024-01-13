@@ -1,4 +1,5 @@
 pub mod health;
+pub mod url;
 
 use super::di;
 use actix_web::{web, App, HttpServer};
@@ -19,4 +20,5 @@ pub async fn run(app_module: di::AppModule, addr: String) -> std::io::Result<()>
 
 fn routes(app: &mut web::ServiceConfig) {
     app.service(web::resource("/health").route(web::get().to(health::health)));
+    app.service(web::resource("/{shortURL}").route(web::get().to(url::get_original_url)));
 }
