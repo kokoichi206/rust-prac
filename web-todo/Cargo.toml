@@ -19,4 +19,5 @@ anyhow  = "*"
 thiserror = "*"
 http-body = "1.0.0"
 validator = { version = "0.16.1", features = ["derive"]}
-async-trait = "0.1.77"
+sqlx = {version = "0.7.3", features = ["runtime-tokio-rustls", "any", "postgres"]}
+dotenv = "0.15.0"

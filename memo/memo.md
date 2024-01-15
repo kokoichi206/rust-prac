@@ -25,3 +25,21 @@
 - Serde
   - JSON を扱う
     - YAML, TOML も
+
+## db
+
+- diesel
+  - OR mapping, クエリービルダー
+  - async どうなってる？
+  - 高機能
+- sqlx
+  - 後発
+  - シンプルな SQL ライブラリ
+  - **SQL のコンパイル時チェック、マイグレーションのみ**
+  - 非同期処理に対応
+
+``` sh
+cargo install sqlx-cli
+
+sqlx migrate add init
+```

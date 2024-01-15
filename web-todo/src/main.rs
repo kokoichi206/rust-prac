@@ -10,9 +10,11 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 
-use crate::repositories::{TodoRepository, TodoRepositoryForMemory};
+use crate::repositories::{TodoRepository, TodoRepositoryForDb};
 use handlers::{all_todo, create_todo, delete_todo, find_todo, update_todo};
 
+use dotenv::dotenv;
+use sqlx::PgPool;
 use std::env;
 
 #[tokio::main]
@@ -21,7 +23,15 @@ async fn main() {
     env::set_var("RUST_LOG", log_level);
     tracing_subscriber::fmt::init();
 
-    let repository = TodoRepositoryForMemory::new();
+    dotenv().ok();
+
+    let db_url = &env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    tracing::debug!("Connecting to {}", db_url);
+    let pool = PgPool::connect(db_url)
+        .await
+        .expect("Failed to connect to Postgres.");
+
+    let repository = TodoRepositoryForDb::new(pool.clone());
     let app = create_app(repository);
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     tracing::debug!("Listening on {}", addr);
@@ -71,7 +81,7 @@ async fn create_a_user(Json(payload): Json<CreateUser>) -> impl IntoResponse {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::repositories::{CreateTodo, Todo};
+    use crate::repositories::{test_utils::TodoRepositoryForMemory, CreateTodo, Todo};
     use axum::{
         body::{to_bytes, Body},
         http::{header, Method, Request},
@@ -163,7 +173,9 @@ mod test {
         let expected = Todo::new(1, "should_find_todo".to_string());
 
         let repo = TodoRepositoryForMemory::new();
-        repo.create(CreateTodo::new("should_find_todo".to_string()));
+        repo.create(CreateTodo::new("should_find_todo".to_string()))
+            .await
+            .unwrap();
         let req = build_todo_req_with_empty("/todos/1", Method::GET);
 
         // Act
