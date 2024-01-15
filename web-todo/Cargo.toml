@@ -17,3 +17,6 @@ tracing = "*"
 tracing-subscriber = {version = "*", features=["env-filter"]}
 anyhow  = "*"
 thiserror = "*"
+http-body = "1.0.0"
+validator = { version = "0.16.1", features = ["derive"]}
+async-trait = "0.1.77"
