@@ -10,8 +10,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 
-use crate::repositories::{TodoRepository, TodoRepositoryForDb};
-use handlers::{all_todo, create_todo, delete_todo, find_todo, update_todo};
+use crate::repositories::todo::{TodoRepository, TodoRepositoryForDb};
+use handlers::todo::{all_todo, create_todo, delete_todo, find_todo, update_todo};
 
 use dotenv::dotenv;
 use sqlx::PgPool;
@@ -81,7 +81,7 @@ async fn create_a_user(Json(payload): Json<CreateUser>) -> impl IntoResponse {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::repositories::{test_utils::TodoRepositoryForMemory, CreateTodo, Todo};
+    use crate::repositories::todo::{test_utils::TodoRepositoryForMemory, CreateTodo, Todo};
     use axum::{
         body::{to_bytes, Body},
         http::{header, Method, Request},
