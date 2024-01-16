@@ -1,19 +1,10 @@
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use validator::Validate;
 
 use axum::async_trait;
 use sqlx::{FromRow, PgPool};
 
-// repository で発送しうるエラーの定義。
-#[derive(Debug, Error)]
-enum RepositoryError {
-    #[error("Unexpected error: [{0}]")]
-    Unexpected(String),
-
-    #[error("NotFound, id is {0}")]
-    NotFound(i32),
-}
+use super::RepositoryError;
 
 // layer の機能のため、Clone, Send, Sync, 'static を継承する。
 #[async_trait]

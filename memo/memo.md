@@ -42,4 +42,5 @@
 cargo install sqlx-cli
 
 sqlx migrate add init
+sqlx migrate add label
 ```
