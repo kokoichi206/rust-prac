@@ -1,11 +1,11 @@
 use std::error::Error;
 use std::sync::Arc;
+
+use async_trait::async_trait;
 use tokio::sync::Mutex;
 use tokio_postgres::{Client, NoTls};
 
 use crate::domain::apperr::AppError;
-
-use async_trait::async_trait;
 
 #[derive(Clone)]
 pub struct Database {
@@ -13,20 +13,24 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn new() -> Result<Database, Box<dyn Error>> {
+    pub async fn new() -> Result<Database, Box<dyn Error>> {
         // TODO: Read from config or env.
         let connection_string = format!(
             "host={} port={} user={} password={} dbname={}",
             "localhost", "6666", "root", "root", "postgresql"
         );
 
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            let (client, _) = tokio_postgres::connect(&connection_string, NoTls).await?;
-            return Ok(Database {
-                client: Arc::new(Mutex::new(client)),
-            });
-        })
+        let (client, conn) = tokio_postgres::connect(&connection_string, NoTls).await?;
+
+        tokio::spawn(async move {
+            if let Err(e) = conn.await {
+                eprintln!("connection error: {}", e);
+            }
+        });
+
+        return Ok(Database {
+            client: Arc::new(Mutex::new(client)),
+        });
     }
 }
 

@@ -10,8 +10,8 @@ pub struct AppModule {
 }
 
 impl AppModule {
-    pub fn new() -> Result<AppModule, Box<dyn Error>> {
-        let database = sqlite::Database::new()?;
+    pub async fn new() -> Result<AppModule, Box<dyn Error>> {
+        let database = sqlite::Database::new().await?;
         let ucase = usecase::main::UsecaseImpl::new(Arc::new(database));
 
         Ok(AppModule {

@@ -1,21 +1,20 @@
 pub mod health;
 pub mod url;
 
+use actix_web::{dev::Server, web, App, HttpServer};
+
 use crate::di;
-use actix_web::{web, App, HttpServer};
 
-#[actix_web::main]
-pub async fn run(app_module: di::AppModule, addr: String) -> std::io::Result<()> {
-    println!("Server running at http://{}", addr);
-
-    HttpServer::new(move || {
+pub fn run(app_module: di::AppModule, addr: String) -> Result<Server, std::io::Error> {
+    let s = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(app_module.clone()))
             .configure(routes)
     })
     .bind(addr)?
-    .run()
-    .await
+    .run();
+
+    Ok(s)
 }
 
 fn routes(app: &mut web::ServiceConfig) {
