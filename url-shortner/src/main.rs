@@ -2,7 +2,7 @@ use std::process;
 
 // use di/mod.rs
 // use handler/mod.rs
-// mod di;
+mod di;
 mod handler;
 mod repository;
 mod usecase;

@@ -7,6 +7,10 @@ use tokio_postgres::{Client, NoTls};
 // use postgres::{Client, NoTls};
 use std::sync::Mutex;
 
+use crate::repository::error::RepositoryError;
+
+use async_trait::async_trait;
+
 #[derive(Clone)]
 pub struct Database {
     client: Arc<Mutex<Client>>,
@@ -52,197 +56,41 @@ FROM shorturl
 WHERE short = $1;
 ";
 
+// 実装側に async_trait を付ける。
+#[async_trait]
 impl super::Repository for Database {
-    // async fn health(&self) -> Result<(), Box<dyn Future<Output = Result<(), Box<dyn Error>>>>> {
-    //     let client = self.client.lock().unwrap();
+    async fn health(&self) -> anyhow::Result<()> {
+        let client = self.client.lock().unwrap();
+        let result = Box::new(client.query("SELECT 1", &[]).await?);
 
-    //     let result = client.query("SELECT 1", &[]).await;
-
-    //     if let Some(row) = result.get(0) {
-    //         let value: i32 = row.get(0);
-    //         if value == 1 {
-    //             Ok(())
-    //         } else {
-    //             Err("Unexpected result from database".into())
-    //         }
-    //     } else {
-    //         Err("No rows returned from database".into())
-    //     }
-
-    //     // rt.block_on(async {
-    //     //     let result = client.query("SELECT 1", &[]).await?;
-
-    //     //     if let Some(row) = result.get(0) {
-    //     //         let value: i32 = row.get(0);
-    //     //         if value == 1 {
-    //     //             Ok(())
-    //     //         } else {
-    //     //             Err("Unexpected result from database".into())
-    //     //         }
-    //     //     } else {
-    //     //         Err("No rows returned from database".into())
-    //     //     }
-    //     // })
-    // }
-    // fn health(&self) -> impl Sized + Send + Future<Output = Result<(), Box<dyn Error>>> {
-    // fn health(&self) -> Result<(), Box<dyn Error>> {
-
-    // fn health(&self) -> impl Sized + Send + Future<Output = Result<(), Box<dyn Error>>> {
-    async fn health(&self) -> Result<(), Box<dyn Error>> {
-        // async fn health(&self) -> Result<(), Box<dyn Error>> {
-        // let client = self.client.lock().unwrap();
-
-        // let rt = tokio::runtime::Runtime::new().unwrap();
-        // let result = thread::spawn(move || client.query("SELECT 1", &[]).unwrap())
-        //     .join()
-        //     .unwrap();
-
-        // if let Some(row) = result.get(0) {
-        //     let value: i32 = row.get(0);
-        //     if value == 1 {
-        //         Ok(())
-        //     } else {
-        //         Err("Unexpected result from database".into())
-        //     }
-        // } else {
-        //     Err("No rows returned from database".into())
-        // }
-
-        // a =============================
-        // let result = client.query("SELECT 1", &[]).await?;
-
-        // if let Some(row) = result.get(0) {
-        //     let value: i32 = row.get(0);
-        //     if value == 1 {
-        //         Ok(())
-        //     } else {
-        //         Err("Unexpected result from database".into())
-        //     }
-        // } else {
-        //     Err("No rows returned from database".into())
-        // }
-
-        // let mut client = self.client.lock().unwrap();
-        // let result = client.query("SELECT 1", &[])?;
-
-        // let result = client.query("SELECT 1", &[]).await?;
-
-        async {
-            let client = self.client.lock().unwrap();
-            let result = Box::new(client.query("SELECT 1", &[]).await?);
-
-            if let Some(row) = result.get(0) {
-                let value: i32 = row.get(0);
-                if value == 1 {
-                    Ok(())
-                } else {
-                    Err("Unexpected result from database".into())
-                }
+        if let Some(row) = result.get(0) {
+            let value: i32 = row.get(0);
+            if value == 1 {
+                Ok(())
             } else {
-                Err("No rows returned from database".into())
+                RepositoryError::Unexpected(format!("Expected 1, got {}", value))
             }
+        } else {
+            RepositoryError::Unexpected("Expected 1 row, got 0 rows".into())
         }
-        .await
-
-        // rt.block_on(async {
-        //     // let lock = self.client.lock();
-        //     // let client = match lock {
-        //     //     Ok(client) => client,
-        //     //     Err(_) => return Err("Failed to lock client".into()),
-        //     // };
-
-        //     let result = client.query("SELECT 1", &[]).await?;
-
-        //     if let Some(row) = result.get(0) {
-        //         let value: i32 = row.get(0);
-        //         if value == 1 {
-        //             Ok(())
-        //         } else {
-        //             Err("Unexpected result from database".into())
-        //         }
-        //     } else {
-        //         Err("No rows returned from database".into())
-        //     }
-        // })
     }
 
-    async fn search_url_from_short_url(
-        &self,
-        short_url: String,
-        // ) -> impl Sized + Send + Future<Output = Result<String, Box<dyn Error>>> {
-    ) -> Result<String, Box<dyn Error>> {
-        // async fn search_url_from_short_url(&self, short_url: String) -> Result<String, Box<dyn Error>> {
-        // let client = self.client.clone();
+    async fn search_url_from_short_url(&self, short_url: String) -> anyhow::Result<String> {
+        let client = self.client.lock().unwrap();
+        let rows = Box::new(
+            client
+                .query(SEARCH_URL_FROM_SHORT_URL_STMT, &[&short_url])
+                .await?,
+        );
 
-        // let client = self.client.lock().unwrap();
-
-        // let client = self.client.lock().await;
-
-        // let mut client = self.client.lock().unwrap();
-        // // let mut client = self.client.clone();
-
-        // let rows = client.query(SEARCH_URL_FROM_SHORT_URL_STMT, &[&short_url])?;
-
-        // let rows = client.query(SEARCH_URL_FROM_SHORT_URL_STMT, &[&short_url]).await?;
-
-        // let su = &short_url;
-        async move {
-            let client = self.client.lock().unwrap();
-            let rows = Box::new(
-                client
-                    .query(SEARCH_URL_FROM_SHORT_URL_STMT, &[&short_url])
-                    .await?,
-            );
-
-            if rows.len() == 1 {
-                if let Some(row) = rows.get(0) {
-                    let url: String = row.get(0);
-                    return Ok(url);
-                }
-                Err("Failed to get single row".into())
-            } else {
-                Err("Unexpected row counts".into())
+        if rows.len() == 1 {
+            if let Some(row) = rows.get(0) {
+                let url: String = row.get(0);
+                return Ok(url);
             }
+            RepositoryError::NotFound(short_url)
+        } else {
+            RepositoryError::Unexpected(format!("Expected 1 row, got {} rows", rows.len()))
         }
-        .await
-
-        // let rt = tokio::runtime::Runtime::new().unwrap();
-        // rt.block_on(async {
-        //     // let lock = self.client.lock();
-        //     // let client = match lock {
-        //     //     Ok(client) => client,
-        //     //     Err(_) => return Err("Failed to lock client".into()),
-        //     // };
-
-        //     let client = self.client.lock().await;
-
-        //     let rows = client
-        //         .query(SEARCH_URL_FROM_SHORT_URL_STMT, &[&short_url])
-        //         .await?;
-
-        //     if rows.len() == 1 {
-        //         if let Some(row) = rows.get(0) {
-        //             let url: String = row.get(0);
-        //             return Ok(url);
-        //         }
-        //         Err("Failed to get single row".into())
-        //     } else {
-        //         Err("Unexpected row counts".into())
-        //     }
-        // })
-
-        // let rows = client
-        //     .query(SEARCH_URL_FROM_SHORT_URL_STMT, &[&short_url])
-        //     .await?;
-
-        // if rows.len() == 1 {
-        //     if let Some(row) = rows.get(0) {
-        //         let url: String = row.get(0);
-        //         return Ok(url);
-        //     }
-        //     Err("Failed to get single row".into())
-        // } else {
-        //     Err("Unexpected row counts".into())
-        // }
     }
 }
