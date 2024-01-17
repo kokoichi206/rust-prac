@@ -6,10 +6,10 @@ struct HealthStatus {
     status: String,
 }
 
-// pub async fn health(app_module: Data<crate::di::AppModule>) -> Result<HttpResponse, Error> {
-pub async fn health(ucase: Data<Box<impl crate::usecase::Usecase>>) -> Result<HttpResponse, Error> {
-    // match app_module.static_usecase().health() {
-    match ucase.health().await {
+pub async fn health(app_module: Data<crate::di::AppModule>) -> Result<HttpResponse, Error> {
+    // pub async fn health(ucase: Data<Box<impl crate::usecase::Usecase>>) -> Result<HttpResponse, Error> {
+    match app_module.static_usecase().health().await {
+        // match ucase.health().await {
         Ok(_) => {
             return Ok(HttpResponse::Ok()
                 .content_type("application/json; charset=utf-8")

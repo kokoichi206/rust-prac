@@ -1,8 +1,8 @@
 use thiserror::Error;
 
-// repository で発送しうるエラーの定義。
-#[derive(Debug, Error)]
-pub enum RepositoryError {
+// application で発送しうるエラーの定義。
+#[derive(Error, Debug)]
+pub enum AppError {
     #[error("Unexpected error: [{0}]")]
     Unexpected(String),
 
