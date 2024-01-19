@@ -1,6 +1,7 @@
 use std::error::Error;
 
 use chrono::{DateTime, Duration, Utc};
+use dotenv;
 use rss::Channel;
 use serde::{Deserialize, Serialize};
 
@@ -38,7 +39,7 @@ struct Embed {
 }
 
 async fn post_to_discord(contents: &Vec<Content>) {
-    let webhook_url = "secret";
+    let webhook_url: &str = &dotenv::var("WEBHOOK_URL").unwrap();
 
     let client = reqwest::Client::new();
 
