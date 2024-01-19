@@ -23,17 +23,18 @@ struct Content {
 #[serde(rename_all = "camelCase")]
 struct DiscordPost {
     // https://discord.com/developers/docs/resources/webhook#execute-webhook
-    Content: String,
-    Embeds: [Embed; 1],
+    content: String,
+    embeds: [Embed; 1],
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct Embed {
     // https://discord.com/developers/docs/resources/channel#embed-object
-    Type: String,
-    Title: String,
-    Url: String,
+    #[serde(rename = "type")]
+    embed_type: String,
+    title: String,
+    url: String,
 }
 
 async fn post_to_discord(contents: &Vec<Content>) {
@@ -44,11 +45,11 @@ async fn post_to_discord(contents: &Vec<Content>) {
     for content in contents {
         let post = DiscordPost {
             // Username: "GitHub Changelog".to_string(),
-            Content: content.title.clone(),
-            Embeds: [Embed {
-                Type: "rich".to_string(),
-                Title: content.title.clone(),
-                Url: content.link.clone(),
+            content: content.title.clone(),
+            embeds: [Embed {
+                embed_type: "rich".to_string(),
+                title: content.title.clone(),
+                url: content.link.clone(),
             }],
         };
         let json = serde_json::to_string(&post);
