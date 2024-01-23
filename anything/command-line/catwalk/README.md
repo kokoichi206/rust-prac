@@ -21,4 +21,9 @@ $ cat -b tests/inputs/include_blank.txt
      2  the following line is blank
 
      3  pien
+
+
+$ man cat
+...
+     -s      Squeeze multiple adjacent empty lines, causing the output to be single spaced.
 ```
