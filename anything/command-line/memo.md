@@ -53,6 +53,19 @@ man true
 - `Box` to create a smart pointer to heap memory
 - **Trust, but verify.**
 
+## sec 3
+
+- `io::BufRead` trait
+  - https://doc.rust-lang.org/std/io/trait.BufRead.html
+- Box
+   - **allocate memory on the heap** by putting the return value
+ - Enumerate
+   - https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.enumerate
+   - for obj and counter
+- bat
+  - cat clone
+  - https://github.com/sharkdp/bat?tab=readme-ov-file
+
 ## english
 
 - conjunction
@@ -70,3 +83,4 @@ man true
 - That's really a lot of information, and I don't blame you if your eyes glazed over
 - amorphous
   - まとまりのない
+- You made big strides in this chapter
