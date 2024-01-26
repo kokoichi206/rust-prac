@@ -33,3 +33,74 @@ fn japanese() -> TestResult {
     // wow, ok...
     run(&[JAPANESE], "tests/expected/japanese.txt")
 }
+
+#[test]
+fn all() -> TestResult {
+    // output includes the total line
+    run(&[EMPTY, FOX, JAPANESE], "tests/expected/all.txt")
+}
+
+#[test]
+fn fox_c() -> TestResult {
+    run(&[FOX, "-c"], "tests/expected/fox.c.txt")
+}
+
+#[test]
+fn japanese_l() -> TestResult {
+    run(&[JAPANESE, "-l"], "tests/expected/japanese.l.txt")
+}
+
+#[test]
+fn stdin() -> TestResult {
+    // $ echo 'hoge pien' | wc
+    //    1       2      10
+    let expected = String::from("       1       2      10\n");
+    Command::cargo_bin("wcr")?
+        .write_stdin("hoge pien\n")
+        .assert()
+        .success()
+        .stdout(expected);
+    Ok(())
+}
+
+#[test]
+fn stdin_c() -> TestResult {
+    // $ echo -n 'hoge pien' | wc -c
+    //    9
+    let expected = String::from("       9\n");
+    Command::cargo_bin("wcr")?
+        .arg("-c")
+        .write_stdin("hoge pien")
+        .assert()
+        .success()
+        .stdout(expected);
+    Ok(())
+}
+
+#[test]
+fn stdin_l_no_line() -> TestResult {
+    // $ echo -n 'hoge pien' | wc -l
+    //    0
+    let expected = String::from("       0\n");
+    Command::cargo_bin("wcr")?
+        .arg("-l")
+        .write_stdin("hoge pien")
+        .assert()
+        .success()
+        .stdout(expected);
+    Ok(())
+}
+
+#[test]
+fn stdin_l() -> TestResult {
+    // $ echo 'hoge pien' | wc -l
+    //    1
+    let expected = String::from("       1\n");
+    Command::cargo_bin("wcr")?
+        .arg("-l")
+        .write_stdin("hoge pien\n")
+        .assert()
+        .success()
+        .stdout(expected);
+    Ok(())
+}

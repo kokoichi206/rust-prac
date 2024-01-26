@@ -91,25 +91,53 @@ pub fn run(config: Config) -> MyResult<()> {
         // NO filename
         // echo hoge | wc
         //    1       1       5
-        println!(
-            "{:>8}{:>8}{:>8}",
-            info.num_lines, info.num_words, info.num_bytes,
-        );
+        print_if_needed(&config, &info, "");
         return Ok(());
     }
+    let mut total = FileInfo {
+        num_lines: 0,
+        num_words: 0,
+        num_bytes: 0,
+        num_chars: 0,
+    };
     for filename in &config.files {
         match open(filename) {
             Err(err) => eprintln!("{}: {}", filename, err),
             Ok(_) => {
                 let info = count(open(filename)?)?;
-                println!(
-                    "{:>8}{:>8}{:>8} {}",
-                    info.num_lines, info.num_words, info.num_bytes, filename,
-                );
+                print_if_needed(&config, &info, filename);
+
+                total.num_lines += info.num_lines;
+                total.num_words += info.num_words;
+                total.num_bytes += info.num_bytes;
+                total.num_chars += info.num_chars;
             }
         }
     }
+    if config.files.len() > 1 {
+        print_if_needed(&config, &total, "total");
+    }
     Ok(())
+}
+
+fn print_if_needed(config: &Config, info: &FileInfo, filename: &str) {
+    if config.lines {
+        print!("{:>8}", info.num_lines);
+    }
+    if config.words {
+        print!("{:>8}", info.num_words);
+    }
+    if config.bytes {
+        print!("{:>8}", info.num_bytes);
+    }
+    if config.chars {
+        print!("{:>8}", info.num_chars);
+    }
+    if filename.is_empty() {
+        println!();
+    } else {
+        println!(" {}", filename);
+    }
 }
 
 fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
@@ -132,7 +160,9 @@ pub fn count(mut file: impl BufRead) -> MyResult<FileInfo> {
         if bytes_read == 0 {
             break;
         }
-        num_lines += 1;
+        if buf.ends_with('\n') {
+            num_lines += 1;
+        }
         num_bytes += bytes_read;
         num_chars += buf.chars().count();
         num_words += buf.split_whitespace().count();
