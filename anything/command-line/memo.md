@@ -84,3 +84,5 @@ man true
 - amorphous
   - まとまりのない
 - You made big strides in this chapter
+- How did that go? Swell, I bet!
+- I don't know about you, but I think that's pretty sweet
