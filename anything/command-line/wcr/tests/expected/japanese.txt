@@ -1,1 +1,1 @@
-	2	2	71 tests/inputs/japanese.txt
+       2       2      71 tests/inputs/japanese.txt

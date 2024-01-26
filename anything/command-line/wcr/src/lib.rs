@@ -92,7 +92,7 @@ pub fn run(config: Config) -> MyResult<()> {
         // echo hoge | wc
         //    1       1       5
         println!(
-            "\t{}\t{}\t{}",
+            "{:>8}{:>8}{:>8}",
             info.num_lines, info.num_words, info.num_bytes,
         );
         return Ok(());
@@ -103,7 +103,7 @@ pub fn run(config: Config) -> MyResult<()> {
             Ok(_) => {
                 let info = count(open(filename)?)?;
                 println!(
-                    "\t{}\t{}\t{} {}",
+                    "{:>8}{:>8}{:>8} {}",
                     info.num_lines, info.num_words, info.num_bytes, filename,
                 );
             }
