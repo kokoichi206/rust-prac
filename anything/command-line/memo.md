@@ -66,6 +66,11 @@ man true
   - cat clone
   - https://github.com/sharkdp/bat?tab=readme-ov-file
 
+## sec 5
+
+- [std::io::Cursor](https://doc.rust-lang.org/std/io/struct.Cursor.html)
+  - used with in-memory buffers, 
+
 ## english
 
 - conjunction
