@@ -1,7 +1,7 @@
 use crate::TakeValue::*;
 use clap::{App, Arg};
-use std::f32::consts::E;
 use std::fs::File;
+use std::path::Path;
 use std::{
     error::Error,
     io::{BufRead, BufReader, Read, Seek},
@@ -9,6 +9,8 @@ use std::{
 
 use once_cell::sync::OnceCell;
 use regex::Regex;
+
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
 
@@ -24,6 +26,7 @@ pub struct Config {
     lines: TakeValue,
     bytes: Option<TakeValue>,
     quiet: bool,
+    follow: bool,
 }
 
 pub fn get_args() -> MyResult<Config> {
@@ -60,6 +63,12 @@ pub fn get_args() -> MyResult<Config> {
                 .long("quiet")
                 .help("Suppress headers"),
         )
+        .arg(
+            Arg::with_name("follow")
+                .short("f")
+                .long("follow")
+                .help("Follow file"),
+        )
         .get_matches();
 
     let lines = matches
@@ -79,6 +88,7 @@ pub fn get_args() -> MyResult<Config> {
         lines: lines.unwrap(),
         bytes: bytes,
         quiet: matches.is_present("quiet"),
+        follow: matches.is_present("follow"),
     })
 }
 
@@ -92,9 +102,53 @@ pub fn run(config: Config) -> MyResult<()> {
                 // println!("{}: {} lines", filename, total_lines);
                 let file = BufReader::new(file);
                 print_lines(file, &config.lines, total_lines)?;
+
+                if config.follow {
+                    watch(filename, total_lines)?;
+                }
             }
         }
     }
+    Ok(())
+}
+
+// watch a file for changes using notify crate
+// https://docs.rs/notify/latest/notify/
+// sample: https://github.com/notify-rs/notify/blob/08e74dae8e96fbd25704cdaa530ffc02f6d33039/examples/monitor_raw.rs
+fn watch<P: AsRef<Path>>(path: P, start: u64) -> notify::Result<()> {
+    let (tx, rx) = std::sync::mpsc::channel();
+
+    let mut watcher = RecommendedWatcher::new(tx, notify::Config::default())?;
+
+    watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
+
+    let filename = path.as_ref().to_str().unwrap();
+
+    let mut next = start;
+    for res in rx {
+        match res {
+            Ok(event) => {
+                // println!("{:?}", event);
+                let (total_lines, _total_bytes) = count_lines_bytes(filename).unwrap();
+                // prevent printing the same lines over and over.
+                if total_lines <= next {
+                    next = total_lines;
+                    continue;
+                }
+
+                // File should open and close each time.
+                let file = File::open(filename)?;
+                print_lines(BufReader::new(&file), &TakeNum(1), total_lines)
+                    .expect("failed to follow file");
+
+                next = total_lines;
+            }
+            Err(error) => {
+                println!("error: {:?}", error);
+            }
+        }
+    }
+
     Ok(())
 }
 
