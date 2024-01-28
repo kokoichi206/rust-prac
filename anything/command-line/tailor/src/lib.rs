@@ -89,6 +89,7 @@ pub fn run(config: Config) -> MyResult<()> {
             Err(err) => eprintln!("{}: {}", filename, err),
             Ok(file) => {
                 let (total_lines, _total_bytes) = count_lines_bytes(&filename)?;
+                // println!("{}: {} lines", filename, total_lines);
                 let file = BufReader::new(file);
                 print_lines(file, &config.lines, total_lines)?;
             }
@@ -108,6 +109,7 @@ fn parse_num(val: &str) -> MyResult<TakeValue> {
                 if sign == "+" && val == 0 {
                     Ok(PlusZero)
                 } else {
+                    // println!("val = {}", val);
                     Ok(TakeNum(val))
                 }
             } else {
@@ -120,7 +122,7 @@ fn parse_num(val: &str) -> MyResult<TakeValue> {
 
 static NUM_RE: OnceCell<Regex> = OnceCell::new();
 
-fn count_lines_bytes(filename: &str) -> MyResult<(i64, i64)> {
+fn count_lines_bytes(filename: &str) -> MyResult<(u64, i64)> {
     let num_re = NUM_RE.get_or_init(|| Regex::new(r"(\d+)").unwrap());
     let mut total_lines = 0;
     let mut total_bytes = 0;
@@ -138,8 +140,9 @@ fn count_lines_bytes(filename: &str) -> MyResult<(i64, i64)> {
     Ok((total_lines, total_bytes))
 }
 
-fn print_lines(mut file: impl BufRead, num_lines: &TakeValue, total_lines: i64) -> MyResult<()> {
+fn print_lines(mut file: impl BufRead, num_lines: &TakeValue, total_lines: u64) -> MyResult<()> {
     if let Some(start) = get_start_index(num_lines, total_lines) {
+        // println!("start = {}", start);
         let mut line_num = 0;
         let mut buf = Vec::new();
         loop {
@@ -160,12 +163,14 @@ fn print_lines(mut file: impl BufRead, num_lines: &TakeValue, total_lines: i64) 
     Ok(())
 }
 
-fn get_start_index(take_val: &TakeValue, total: i64) -> Option<u64> {
+fn get_start_index(take_val: &TakeValue, total: u64) -> Option<u64> {
     match take_val {
         PlusZero => Some(0),
         TakeNum(n) => {
+            // println!("n = {}", n);
             if *n > 0 {
-                Some(total.saturating_sub(*n) as u64)
+                // let t = total.saturating_sub(*n as u64);
+                Some(total.saturating_sub(*n as u64))
             } else {
                 None
             }
