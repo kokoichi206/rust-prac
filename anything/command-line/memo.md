@@ -71,6 +71,11 @@ man true
 - [std::io::Cursor](https://doc.rust-lang.org/std/io/struct.Cursor.html)
   - used with in-memory buffers, 
 
+## others
+
+- [tmpfile](https://docs.rs/tempfile/3.2.0/tempfile/)
+- [where clauses](https://doc.rust-lang.org/rust-by-example/generics/where.html)
+
 ## english
 
 - conjunction
@@ -91,3 +96,5 @@ man true
 - You made big strides in this chapter
 - How did that go? Swell, I bet!
 - I don't know about you, but I think that's pretty sweet
+- There's only one everything
+- learn how to do the following
