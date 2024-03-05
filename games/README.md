@@ -1,0 +1,4 @@
+- [Canvas API (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
+- wasm_bindgen
+  - JavaScriptの関数のバインディングを提供
+- [Calls between JavaScript and WebAssembly are finally fast](https://hacks.mozilla.org/2018/10/calls-between-javascript-and-webassembly-are-finally-fast-%F0%9F%8E%89/)
