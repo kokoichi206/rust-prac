@@ -7,8 +7,12 @@ fn main() {
 
 #[derive(Debug, PartialEq, Eq)] // トレイトの継承
 enum Value<'src> {
+    // スタック上に push された数値。
     Num(i32),
+    // 演算子。
     Op(&'src str),
+    // ネストされたブロック（？）
+    // { } とかで囲まれたところを表す。
     Block(Vec<Value<'src>>),
 }
 
@@ -27,39 +31,43 @@ fn add(stack: &mut Vec<Value>) {
     stack.push(Value::Num(lhs + rhs));
 }
 
+// example 1
+// input: 3 1 + { 3 1 + }
+// stack: [Num(4), Block([Num(3), Num(1), Op("+")])]
+//
+// example 2
+// input: 3 1 + { { 2 + 1 } 3 + }
+// stack: [Num(4), Block([Block([Num(2), Op("+"), Num(1)]), Num(3), Op("+")])]
 fn sec2p5() {
-    for line in std::io::stdin().lines() {
-        let mut stack = vec![];
-        if let Ok(line) = line {
-            let words: Vec<_> = line.split(" ").collect();
-
-            while let Some((&word, mut rest)) = words.split_first() {
-                if word == "{" {
-                    let value;
-                    (value, rest) = parse_block(rest);
-                    stack.push(value);
-                } else {
-                    // ...
-                }
-                words = rest;
-            }
-
-            // for word in words {
-            //     if let Ok(parsed) = word.parse::<i32>() {
-            //         stack.push(parsed);
-            //     } else {
-            //         match word {
-            //             "+" => add(&mut stack),
-            //             "-" => sub(&mut stack),
-            //             "*" => mul(&mut stack),
-            //             "/" => div(&mut stack),
-            //             _ => panic!("{word:?} could not be parsed"),
-            //         }
-            //     }
-            // }
-            println!("stack: {stack:?}");
-        }
+    for line in std::io::stdin().lines().flatten() {
+        parse(&line);
     }
+}
+
+fn parse<'a>(line: &'a str) -> Vec<Value> {
+    let mut stack = vec![];
+    let mut words: Vec<_> = line.split(" ").collect();
+
+    while let Some((&word, mut rest)) = words.split_first() {
+        if word == "{" {
+            let value;
+            (value, rest) = parse_block(rest);
+            stack.push(value);
+            println!("stack: {stack:?}");
+        } else if let Ok(parsed) = word.parse::<i32>() {
+            stack.push(Value::Num(parsed))
+        } else {
+            match word {
+                "+" => add(&mut stack),
+                _ => panic!("{word:?} could not be parsed!"),
+            }
+        }
+        words = rest.to_vec();
+    }
+
+    println!("stack: {stack:?}");
+
+    stack
 }
 
 fn parse_block<'src, 'a>(input: &'a [&'src str]) -> (Value<'src>, &'a [&'src str]) {
@@ -91,8 +99,14 @@ fn parse_block<'src, 'a>(input: &'a [&'src str]) -> (Value<'src>, &'a [&'src str
 
 #[cfg(test)]
 mod test {
-    // use super::{Value::*, *};
-    // use std::io::Cursor;
+    use super::{parse, Value::*};
+    #[test]
+    fn test_group() {
+        assert_eq!(
+            parse("1 2 + { 3 4 }"),
+            vec![Num(3), Block(vec![Num(3), Num(4)])],
+        )
+    }
 
     // fn parse(input: &str) -> Vec<Value> {
     //     let mut vm = Vm::new();
