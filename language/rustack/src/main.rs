@@ -5,7 +5,41 @@ fn main() {
     sec2p5();
 }
 
-#[derive(Debug, PartialEq, Eq)] // トレイトの継承
+fn eval<'src>(code: Value<'src>, stack: &mut Vec<Value<'src>>) {
+    // fn eval(code: Value, stack: &mut Vec<Value>) {
+    match code {
+        Value::Op(op) => match op {
+            "+" => add(stack),
+            "if" => op_if(stack),
+            _ => panic!("{op:?} could not be parsed!!!"),
+        },
+        _ => stack.push(code.clone()),
+    }
+}
+
+fn op_if(stack: &mut Vec<Value>) {
+    let false_branch = stack.pop().unwrap().to_block();
+    let true_branch = stack.pop().unwrap().to_block();
+    let cond = stack.pop().unwrap().to_block();
+
+    for code in cond {
+        eval(code, stack);
+    }
+
+    let cond_result = stack.pop().unwrap().as_num();
+
+    if cond_result != 0 {
+        for cond in true_branch {
+            eval(cond, stack);
+        }
+    } else {
+        for code in false_branch {
+            eval(code, stack);
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)] // トレイトの継承
 enum Value<'src> {
     // スタック上に push された数値。
     Num(i32),
@@ -21,6 +55,15 @@ impl<'src> Value<'src> {
         match self {
             Self::Num(val) => *val,
             _ => panic!("Value is NOT a number!!"),
+        }
+    }
+}
+
+impl<'src> Value<'src> {
+    fn to_block(self) -> Vec<Value<'src>> {
+        match self {
+            Self::Block(val) => val,
+            _ => panic!("Value is not a BLOCK!!!"),
         }
     }
 }
@@ -41,10 +84,18 @@ fn add(stack: &mut Vec<Value>) {
 fn sec2p5() {
     for line in std::io::stdin().lines().flatten() {
         parse(&line);
+        // parse(String::from(line));
     }
 }
 
-fn parse<'a>(line: &'a str) -> Vec<Value> {
+// https://doc.rust-jp.rs/book-ja/ch10-03-lifetime-syntax.html
+// 究極的にライフタイム記法は、関数のいろんな引数と戻り値のライフタイムを接続することに関するものです。
+//
+// fn parse<'a>(line: &'a str) {
+fn parse(line: &str) -> Vec<Value> {
+    // fn parse<'b>(line: &'b str) {
+    // fn parse(line: &'static str) {
+    // fn parse(line: String) {
     let mut stack = vec![];
     let mut words: Vec<_> = line.split(" ").collect();
 
@@ -54,14 +105,24 @@ fn parse<'a>(line: &'a str) -> Vec<Value> {
             (value, rest) = parse_block(rest);
             stack.push(value);
             println!("stack: {stack:?}");
-        } else if let Ok(parsed) = word.parse::<i32>() {
-            stack.push(Value::Num(parsed))
+        // } else if let Ok(parsed) = word.parse::<i32>() {
+        //     stack.push(Value::Num(parsed))
+        // } else {
+        //     match word {
+        //         "+" => add(&mut stack),
+        //         _ => panic!("{word:?} could not be parsed!"),
+        //     }
+        // }
         } else {
-            match word {
-                "+" => add(&mut stack),
-                _ => panic!("{word:?} could not be parsed!"),
-            }
+            let code = if let Ok(num) = word.parse::<i32>() {
+                Value::Num(num)
+            } else {
+                Value::Op(word)
+            };
+
+            eval(code, &mut stack);
         }
+
         words = rest.to_vec();
     }
 
@@ -106,6 +167,22 @@ mod test {
             parse("1 2 + { 3 4 }"),
             vec![Num(3), Block(vec![Num(3), Num(4)])],
         )
+    }
+
+    #[test]
+    fn test_if_false() {
+        assert_eq!(
+            parse("{ 1 -1 + } { 100 } { -100 } if"),
+            vec![Num(-100)],
+        );
+    }
+
+    #[test]
+    fn test_if_true() {
+        assert_eq!(
+            parse("{ 1 1 + } { 100 } { -100 } if"),
+            vec![Num(100)],
+        );
     }
 
     // fn parse(input: &str) -> Vec<Value> {
