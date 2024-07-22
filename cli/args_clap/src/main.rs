@@ -14,7 +14,7 @@ fn main() {
             Arg::new("projectid")
                 .long("project-id")
                 .aliases(["projectid", "pid"])
-                .required(true)
+                .required(false)
                 // only can use one of lastname or firstname
                 // .conflicts_with("lastname"),
                 .help("your cloud's project id"),
@@ -65,15 +65,30 @@ fn main() {
         )
         .get_matches();
 
-    println!(
-        "fluffy {}",
-        match_result.get_one::<String>("fluffy").unwrap()
-    );
+    // println!(
+    //     "fluffy {}",
+    //     match_result.get_one::<String>("fluffy").unwrap()
+    // );
 
     let register_args = match_result.subcommand_matches("register-person");
-    println!(
-        "does include {}",
-        register_args.unwrap().get_one::<String>("first-name").unwrap()
-        // register_args.unwrap().contains_id("first-name")
-    )
+    // println!(
+    //     "does include {}",
+    //     register_args
+    //         .unwrap()
+    //         .get_one::<String>("first-name")
+    //         .unwrap() // register_args.unwrap().contains_id("first-name")
+    // );
+
+    // https://docs.rs/clap/latest/clap/_tutorial/chapter_2/index.html#subcommands
+    match match_result.subcommand() {
+        Some(("register-person", sub_matches)) => println!(
+            "'register-person' was used, name is: {:?}",
+            sub_matches.get_one::<String>("firstname")
+        ),
+        Some(("delete-person", sub_matches)) => println!(
+            "'delete-person' was used, id is: {:?}",
+            sub_matches.get_one::<String>("personid")
+        ),
+        _ => unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`"),
+    }
 }
