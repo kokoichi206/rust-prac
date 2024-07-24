@@ -5,38 +5,99 @@ fn main() {
     sec2p5();
 }
 
-fn eval<'src>(code: Value<'src>, stack: &mut Vec<Value<'src>>) {
-    // fn eval(code: Value, stack: &mut Vec<Value>) {
-    match code {
-        Value::Op(op) => match op {
-            "+" => add(stack),
-            "if" => op_if(stack),
-            _ => panic!("{op:?} could not be parsed!!!"),
-        },
-        _ => stack.push(code.clone()),
+use std::collections::HashMap;
+
+#[derive(Debug, Clone, PartialEq, Eq)] // トレイトの継承
+struct Vm<'src> {
+    stack: Vec<Value<'src>>,
+    vars: HashMap<&'src str, Value<'src>>,
+}
+
+impl<'src> Vm<'src> {
+    fn new() -> Self {
+        Self {
+            stack: vec![],
+            vars: HashMap::new(),
+        }
     }
 }
 
-fn op_if(stack: &mut Vec<Value>) {
-    let false_branch = stack.pop().unwrap().to_block();
-    let true_branch = stack.pop().unwrap().to_block();
-    let cond = stack.pop().unwrap().to_block();
+fn eval<'src>(code: Value<'src>, vm: &mut Vm<'src>) {
+    // fn eval(code: Value, stack: &mut Vec<Value>) {
+    match code {
+        Value::Op(op) => match op {
+            "+" => add(&mut vm.stack),
+            "-" => sub(&mut vm.stack),
+            "*" => mul(&mut vm.stack),
+            "<" => lt(&mut vm.stack),
+            "if" => op_if(vm),
+            "def" => op_def(vm),
+            _ => {
+                let val = vm
+                    .vars
+                    .get(op)
+                    .expect(&format!("{op:?} is not a defined operation"));
+                vm.stack.push(val.clone())
+            }
+        },
+        _ => vm.stack.push(code.clone()),
+    }
+}
+
+// https://doc.rust-lang.org/reference/macros-by-example.html
+macro_rules! impl_op {
+    {$name:ident, $op:tt} => {
+        fn $name(stack: &mut Vec<Value>) {
+            let rhs = stack.pop().unwrap().as_num();
+            let lhs = stack.pop().unwrap().as_num();
+            stack.push(Value::Num((lhs $op rhs) as i32))
+        }
+    }
+}
+impl_op!(sub, +);
+impl_op!(mul, *);
+impl_op!(lt, <);
+
+// fn op_if(stack: &mut Vec<Value>) {
+fn op_if<'src>(vm: &mut Vm<'src>) {
+    let false_branch = vm.stack.pop().unwrap().to_block();
+    let true_branch = vm.stack.pop().unwrap().to_block();
+    let cond = vm.stack.pop().unwrap().to_block();
 
     for code in cond {
-        eval(code, stack);
+        eval(code, vm);
     }
 
-    let cond_result = stack.pop().unwrap().as_num();
+    let cond_result = vm.stack.pop().unwrap().as_num();
 
     if cond_result != 0 {
         for cond in true_branch {
-            eval(cond, stack);
+            eval(cond, vm);
         }
     } else {
         for code in false_branch {
-            eval(code, stack);
+            eval(code, vm);
         }
     }
+}
+
+// /x 10 20 + def
+// x := 20 + 10
+// x := 20 + 10 + 20 はどう？
+// Q.
+// /x 20 10 + 20 + def
+// /x 20 10 +
+// /x 30
+// /x 30 20 +
+// /x 50
+// /x 50 def
+fn op_def(vm: &mut Vm) {
+    let value = vm.stack.pop().unwrap();
+    eval(value, vm);
+    let value = vm.stack.pop().unwrap();
+    let sym = vm.stack.pop().unwrap().as_sym();
+
+    vm.vars.insert(sym, value);
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)] // トレイトの継承
@@ -45,6 +106,7 @@ enum Value<'src> {
     Num(i32),
     // 演算子。
     Op(&'src str),
+    Sym(&'src str),
     // ネストされたブロック（？）
     // { } とかで囲まれたところを表す。
     Block(Vec<Value<'src>>),
@@ -55,6 +117,14 @@ impl<'src> Value<'src> {
         match self {
             Self::Num(val) => *val,
             _ => panic!("Value is NOT a number!!"),
+        }
+    }
+
+    fn as_sym(&self) -> &'src str {
+        if let Self::Sym(sym) = self {
+            *sym
+        } else {
+            panic!("value is not a symbol")
         }
     }
 }
@@ -91,44 +161,49 @@ fn sec2p5() {
 // https://doc.rust-jp.rs/book-ja/ch10-03-lifetime-syntax.html
 // 究極的にライフタイム記法は、関数のいろんな引数と戻り値のライフタイムを接続することに関するものです。
 //
-// fn parse<'a>(line: &'a str) {
-fn parse(line: &str) -> Vec<Value> {
+fn parse<'a>(line: &'a str) -> Vec<Value> {
+    // fn parse(line: &str) -> Vec<Value> {
     // fn parse<'b>(line: &'b str) {
     // fn parse(line: &'static str) {
     // fn parse(line: String) {
-    let mut stack = vec![];
+    // let mut stack = vec![];
+    let mut vm: Vm = Vm::new();
     let mut words: Vec<_> = line.split(" ").collect();
 
     while let Some((&word, mut rest)) = words.split_first() {
         if word == "{" {
             let value;
             (value, rest) = parse_block(rest);
-            stack.push(value);
-            println!("stack: {stack:?}");
-        // } else if let Ok(parsed) = word.parse::<i32>() {
-        //     stack.push(Value::Num(parsed))
-        // } else {
-        //     match word {
-        //         "+" => add(&mut stack),
-        //         _ => panic!("{word:?} could not be parsed!"),
-        //     }
-        // }
+            vm.stack.push(value);
+            // println!("stack: {vm.stack}");
+            // } else if let Ok(parsed) = word.parse::<i32>() {
+            //     stack.push(Value::Num(parsed))
+            // } else {
+            //     match word {
+            //         "+" => add(&mut stack),
+            //         _ => panic!("{word:?} could not be parsed!"),
+            //     }
+            // }
         } else {
             let code = if let Ok(num) = word.parse::<i32>() {
                 Value::Num(num)
+            } else if word.starts_with("/") {
+                // 今回はこれを変数のはじまり言葉とする！
+                Value::Sym(&word[1..])
             } else {
                 Value::Op(word)
             };
 
-            eval(code, &mut stack);
+            eval(code, &mut vm);
         }
 
         words = rest.to_vec();
     }
 
-    println!("stack: {stack:?}");
+    println!("vm.stack: {vm:?}");
+    println!("vm.stack: {:?}", vm.stack);
 
-    stack
+    vm.stack
 }
 
 fn parse_block<'src, 'a>(input: &'a [&'src str]) -> (Value<'src>, &'a [&'src str]) {
@@ -171,18 +246,12 @@ mod test {
 
     #[test]
     fn test_if_false() {
-        assert_eq!(
-            parse("{ 1 -1 + } { 100 } { -100 } if"),
-            vec![Num(-100)],
-        );
+        assert_eq!(parse("{ 1 -1 + } { 100 } { -100 } if"), vec![Num(-100)],);
     }
 
     #[test]
     fn test_if_true() {
-        assert_eq!(
-            parse("{ 1 1 + } { 100 } { -100 } if"),
-            vec![Num(100)],
-        );
+        assert_eq!(parse("{ 1 1 + } { 100 } { -100 } if"), vec![Num(100)],);
     }
 
     // fn parse(input: &str) -> Vec<Value> {
