@@ -63,7 +63,9 @@ cargo r
     - `Value<'src>`
       - 再起的に自分自身の型を示している
   - **ソース文字列の存在期間**
+- dangling reference
 
 ### macro
 
 - Rust のマクロは AST に対する操作
+- REPL: Read-Eval-Print Loop

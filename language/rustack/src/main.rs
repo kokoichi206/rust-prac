@@ -5,33 +5,45 @@ fn main() {
     sec2p5();
 }
 
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    io::{BufRead, BufReader},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)] // トレイトの継承
-struct Vm<'src> {
-    stack: Vec<Value<'src>>,
-    vars: HashMap<&'src str, Value<'src>>,
+struct Vm {
+    stack: Vec<Value>,
+    vars: HashMap<String, Value>,
+    // 波括弧によるブロック定義の進捗を表す！
+    blocks: Vec<Vec<Value>>,
 }
 
-impl<'src> Vm<'src> {
+impl Vm {
     fn new() -> Self {
         Self {
             stack: vec![],
             vars: HashMap::new(),
+            blocks: vec![],
         }
     }
 }
 
-fn eval<'src>(code: Value<'src>, vm: &mut Vm<'src>) {
+fn eval(code: Value, vm: &mut Vm) {
     // fn eval(code: Value, stack: &mut Vec<Value>) {
+    if let Some(top_block) = vm.blocks.last_mut() {
+        top_block.push(code);
+        return;
+    }
     match code {
-        Value::Op(op) => match op {
+        Value::Op(ref op) => match op as &str {
+            // Value::Op(op) => match op as &str {
             "+" => add(&mut vm.stack),
             "-" => sub(&mut vm.stack),
             "*" => mul(&mut vm.stack),
             "<" => lt(&mut vm.stack),
             "if" => op_if(vm),
             "def" => op_def(vm),
+            "puts" => puts(vm),
             _ => {
                 let val = vm
                     .vars
@@ -54,12 +66,12 @@ macro_rules! impl_op {
         }
     }
 }
-impl_op!(sub, +);
+impl_op!(sub, -);
 impl_op!(mul, *);
 impl_op!(lt, <);
 
 // fn op_if(stack: &mut Vec<Value>) {
-fn op_if<'src>(vm: &mut Vm<'src>) {
+fn op_if(vm: &mut Vm) {
     let false_branch = vm.stack.pop().unwrap().to_block();
     let true_branch = vm.stack.pop().unwrap().to_block();
     let cond = vm.stack.pop().unwrap().to_block();
@@ -95,24 +107,24 @@ fn op_def(vm: &mut Vm) {
     let value = vm.stack.pop().unwrap();
     eval(value, vm);
     let value = vm.stack.pop().unwrap();
-    let sym = vm.stack.pop().unwrap().as_sym();
+    let sym = vm.stack.pop().unwrap().as_sym().to_string();
 
     vm.vars.insert(sym, value);
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)] // トレイトの継承
-enum Value<'src> {
+enum Value {
     // スタック上に push された数値。
     Num(i32),
     // 演算子。
-    Op(&'src str),
-    Sym(&'src str),
+    Op(String),
+    Sym(String),
     // ネストされたブロック（？）
     // { } とかで囲まれたところを表す。
-    Block(Vec<Value<'src>>),
+    Block(Vec<Value>),
 }
 
-impl<'src> Value<'src> {
+impl Value {
     fn as_num(&self) -> i32 {
         match self {
             Self::Num(val) => *val,
@@ -120,22 +132,33 @@ impl<'src> Value<'src> {
         }
     }
 
-    fn as_sym(&self) -> &'src str {
+    fn as_sym(&self) -> &str {
         if let Self::Sym(sym) = self {
-            *sym
+            sym
         } else {
             panic!("value is not a symbol")
         }
     }
-}
 
-impl<'src> Value<'src> {
-    fn to_block(self) -> Vec<Value<'src>> {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Num(i) => i.to_string(),
+            Self::Op(ref s) | Self::Sym(ref s) => s.clone(),
+            Self::Block(_) => "<Block>".to_string(),
+        }
+    }
+
+    fn to_block(self) -> Vec<Value> {
         match self {
             Self::Block(val) => val,
             _ => panic!("Value is not a BLOCK!!!"),
         }
     }
+}
+
+fn puts(vm: &mut Vm) {
+    let value = vm.stack.pop().unwrap();
+    println!("{}", value.to_string());
 }
 
 fn add(stack: &mut Vec<Value>) {
@@ -152,107 +175,161 @@ fn add(stack: &mut Vec<Value>) {
 // input: 3 1 + { { 2 + 1 } 3 + }
 // stack: [Num(4), Block([Block([Num(2), Op("+"), Num(1)]), Num(3), Op("+")])]
 fn sec2p5() {
-    for line in std::io::stdin().lines().flatten() {
-        parse(&line);
-        // parse(String::from(line));
+    if let Some(f) = std::env::args()
+        .nth(1)
+        .and_then(|f| std::fs::File::open(f).ok())
+    {
+        // あえてバッファリングを行わないらしい。
+        parse_batch(BufReader::new(f));
+    } else {
+        parse_interactive();
     }
+    // // let mut vm = Vm::new();
+    // for line in std::io::stdin().lines().flatten() {
+    //     parse(&line);
+    //     // parse(&line, &mut vm);
+    //     // parse(String::from(line));
+    // }
 }
 
-// https://doc.rust-jp.rs/book-ja/ch10-03-lifetime-syntax.html
-// 究極的にライフタイム記法は、関数のいろんな引数と戻り値のライフタイムを接続することに関するものです。
-//
-fn parse<'a>(line: &'a str) -> Vec<Value> {
-    // fn parse(line: &str) -> Vec<Value> {
-    // fn parse<'b>(line: &'b str) {
-    // fn parse(line: &'static str) {
-    // fn parse(line: String) {
-    // let mut stack = vec![];
-    let mut vm: Vm = Vm::new();
-    let mut words: Vec<_> = line.split(" ").collect();
-
-    while let Some((&word, mut rest)) = words.split_first() {
-        if word == "{" {
-            let value;
-            (value, rest) = parse_block(rest);
-            vm.stack.push(value);
-            // println!("stack: {vm.stack}");
-            // } else if let Ok(parsed) = word.parse::<i32>() {
-            //     stack.push(Value::Num(parsed))
-            // } else {
-            //     match word {
-            //         "+" => add(&mut stack),
-            //         _ => panic!("{word:?} could not be parsed!"),
-            //     }
-            // }
-        } else {
-            let code = if let Ok(num) = word.parse::<i32>() {
-                Value::Num(num)
-            } else if word.starts_with("/") {
-                // 今回はこれを変数のはじまり言葉とする！
-                Value::Sym(&word[1..])
-            } else {
-                Value::Op(word)
-            };
-
-            eval(code, &mut vm);
+fn parse_batch(source: impl BufRead) -> Vec<Value> {
+    let mut vm = Vm::new();
+    for line in source.lines().flatten() {
+        for word in line.split(" ") {
+            parse_word(word, &mut vm);
         }
-
-        words = rest.to_vec();
     }
-
-    println!("vm.stack: {vm:?}");
-    println!("vm.stack: {:?}", vm.stack);
-
     vm.stack
 }
 
-fn parse_block<'src, 'a>(input: &'a [&'src str]) -> (Value<'src>, &'a [&'src str]) {
-    let mut tokens = vec![];
-    let mut words = input;
-
-    while let Some((&word, mut rest)) = words.split_first() {
-        if word.is_empty() {
-            break;
+fn parse_interactive() {
+    let mut vm = Vm::new();
+    for line in std::io::stdin().lines().flatten() {
+        for word in line.split(" ") {
+            parse_word(word, &mut vm);
         }
-
-        if word == "{" {
-            let value;
-            (value, rest) = parse_block(rest);
-            tokens.push(value)
-        } else if word == "}" {
-            return (Value::Block(tokens), rest);
-        } else if let Ok(value) = word.parse::<i32>() {
-            tokens.push(Value::Num(value))
-        } else {
-            tokens.push(Value::Op(word))
-        }
-
-        words = rest;
+        println!("stack: {:?}", vm.stack);
     }
-
-    (Value::Block(tokens), words)
 }
+
+fn parse_word(word: &str, vm: &mut Vm) {
+    if word.is_empty() {
+        return;
+    }
+    if word == "{" {
+        vm.blocks.push(vec![])
+    } else if word == "}" {
+        let top_block = vm.blocks.pop().expect("Block stack underrun!");
+        eval(Value::Block(top_block), vm);
+    } else {
+        let code = if let Ok(num) = word.parse::<i32>() {
+            Value::Num(num)
+        } else if word.starts_with("/") {
+            Value::Sym(word[1..].to_string())
+        } else {
+            Value::Op(word.to_string())
+        };
+        eval(code, vm);
+    }
+}
+
+// // https://doc.rust-jp.rs/book-ja/ch10-03-lifetime-syntax.html
+// // 究極的にライフタイム記法は、関数のいろんな引数と戻り値のライフタイムを接続することに関するものです。
+// //
+// // fn parse<'vm, 'a>(line: &'a str, vm: &'vm Vm<'a>) -> &'vm [Value<'a>] {
+// fn parse<'a>(line: &'a str) -> Vec<Value> {
+//     // fn parse(line: &str) -> Vec<Value> {
+//     // fn parse<'b>(line: &'b str) {
+//     // fn parse(line: &'static str) {
+//     // fn parse(line: String) {
+//     // let mut stack = vec![];
+
+//     let mut vm: Vm = Vm::new();
+//     let mut words: Vec<_> = line.split(" ").collect();
+
+//     while let Some((&word, mut rest)) = words.split_first() {
+//         if word == "{" {
+//             let value;
+//             (value, rest) = parse_block(rest);
+//             vm.stack.push(value);
+//             // println!("stack: {vm.stack}");
+//             // } else if let Ok(parsed) = word.parse::<i32>() {
+//             //     stack.push(Value::Num(parsed))
+//             // } else {
+//             //     match word {
+//             //         "+" => add(&mut stack),
+//             //         _ => panic!("{word:?} could not be parsed!"),
+//             //     }
+//             // }
+//         } else {
+//             let code = if let Ok(num) = word.parse::<i32>() {
+//                 Value::Num(num)
+//             } else if word.starts_with("/") {
+//                 // 今回はこれを変数のはじまり言葉とする！
+//                 Value::Sym(word[1..].to_string())
+//             } else {
+//                 Value::Op(word.to_string())
+//             };
+
+//             eval(code, &mut vm);
+//         }
+
+//         words = rest.to_vec();
+//     }
+
+//     println!("vm.stack: {vm:?}");
+//     println!("vm.stack: {:?}", vm.stack);
+
+//     vm.stack
+// }
+
+// fn parse_block<'src, 'a>(input: &'a [&'src str]) -> (Value, &'a [&'src str]) {
+//     let mut tokens = vec![];
+//     let mut words = input;
+
+//     while let Some((&word, mut rest)) = words.split_first() {
+//         if word.is_empty() {
+//             break;
+//         }
+
+//         if word == "{" {
+//             let value;
+//             (value, rest) = parse_block(rest);
+//             tokens.push(value)
+//         } else if word == "}" {
+//             return (Value::Block(tokens), rest);
+//         } else if let Ok(value) = word.parse::<i32>() {
+//             tokens.push(Value::Num(value))
+//         } else {
+//             tokens.push(Value::Op(word))
+//         }
+
+//         words = rest;
+//     }
+
+//     (Value::Block(tokens), words)
+// }
 
 #[cfg(test)]
 mod test {
-    use super::{parse, Value::*};
-    #[test]
-    fn test_group() {
-        assert_eq!(
-            parse("1 2 + { 3 4 }"),
-            vec![Num(3), Block(vec![Num(3), Num(4)])],
-        )
-    }
+    use super::Value::*;
+    // #[test]
+    // fn test_group() {
+    //     assert_eq!(
+    //         parse("1 2 + { 3 4 }"),
+    //         vec![Num(3), Block(vec![Num(3), Num(4)])],
+    //     )
+    // }
 
-    #[test]
-    fn test_if_false() {
-        assert_eq!(parse("{ 1 -1 + } { 100 } { -100 } if"), vec![Num(-100)],);
-    }
+    // #[test]
+    // fn test_if_false() {
+    //     assert_eq!(parse("{ 1 -1 + } { 100 } { -100 } if"), vec![Num(-100)],);
+    // }
 
-    #[test]
-    fn test_if_true() {
-        assert_eq!(parse("{ 1 1 + } { 100 } { -100 } if"), vec![Num(100)],);
-    }
+    // #[test]
+    // fn test_if_true() {
+    //     assert_eq!(parse("{ 1 1 + } { 100 } { -100 } if"), vec![Num(100)],);
+    // }
 
     // fn parse(input: &str) -> Vec<Value> {
     //     let mut vm = Vm::new();

@@ -1,0 +1,14 @@
+/x 5 def
+/y 20 def
+
+{
+    x y <
+}
+{
+    y x -
+}
+{
+    x y -
+} if
+
+puts
