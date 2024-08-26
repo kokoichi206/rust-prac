@@ -63,6 +63,8 @@ fn eval(code: Value, vm: &mut Vm) {
         match val {
             Value::Block(block) => {
                 for code in block {
+                    println!("{:?}", vm.stack);
+                    println!("{:?}", code);
                     eval(code, vm);
                 }
             }
@@ -79,6 +81,10 @@ fn eval(code: Value, vm: &mut Vm) {
 fn dup(vm: &mut Vm) {
     let value = vm.stack.last().unwrap();
     vm.stack.push(value.clone());
+}
+
+fn is_commented_line(line: &str) -> bool {
+    line.trim_start().starts_with("//")
 }
 
 // exchange: スタックの最上位の 2 つの値を交換する。
@@ -266,6 +272,10 @@ fn sec2p5() {
 fn parse_batch(source: impl BufRead) {
     let mut vm = Vm::new();
     for line in source.lines().flatten() {
+        if is_commented_line(&line) {
+            continue;
+        }
+
         for word in line.split(" ") {
             parse_word(word, &mut vm);
         }
@@ -275,6 +285,10 @@ fn parse_batch(source: impl BufRead) {
 fn parse_interactive() {
     let mut vm = Vm::new();
     for line in std::io::stdin().lines().flatten() {
+        if is_commented_line(&line) {
+            continue;
+        }
+
         for word in line.split(" ") {
             parse_word(word, &mut vm);
         }

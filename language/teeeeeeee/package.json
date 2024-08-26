@@ -1,0 +1,50 @@
+{
+  "name": "teeeeeeee",
+  "displayName": "teeeeeeee",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "teeeeeeee",
+        "aliases": [
+          "teeeeeeee",
+          "teeeeeeee"
+        ],
+        "extensions": [
+          "teeeeeeee"
+        ],
+        "configuration": "./language-configuration.json",
+        "firstLine": "0-9.-]*\\b"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "teeeeeeee",
+        "scopeName": "",
+        "path": "./syntaxes/teeeeeeee.tmLanguage.json"
+      }
+    ],
+    "colors": [
+      {
+        "id": "teeeeeeee.error",
+        "description": "Color for error message in the status bar.",
+        "defaults": {
+          "dark": "errorForeground",
+          "light": "errorForeground",
+          "highContrast": "#010203",
+          "highContrastLight": "#feedc3"
+        }
+      }
+    ]
+  },
+  "semanticTokenColors": {
+    "type": "#ff0011"
+  }
+}

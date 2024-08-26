@@ -4,3 +4,30 @@
 
 10 double puts
 10 square puts
+
+/vec2sqlen { square exch square exch + } def
+
+// 1 2 vec2sqlen puts
+// [Num(1), Num(2)]
+// Op("square")
+// [Num(1), Num(2)]
+// Op("dup")
+// [Num(1), Num(2), Num(2)]
+// Op("*")
+// [Num(1), Num(4)]
+// Op("exch")
+// [Num(4), Num(1)]
+// Op("square")
+// [Num(4), Num(1)]
+// Op("dup")
+// [Num(4), Num(1), Num(1)]
+// Op("*")
+// [Num(4), Num(1)]
+// Op("exch")
+// [Num(1), Num(4)]
+// Op("+")
+// 5
+1 2 vec2sqlen puts
+
+
+
