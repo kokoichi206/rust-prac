@@ -20,9 +20,28 @@ struct Vm {
 
 impl Vm {
     fn new() -> Self {
+        // 参照用の定義。
+        let functions: [(&str, fn(&mut Vm)); 10] = [
+            ("+", add),
+            ("-", sub),
+            ("*", mul),
+            // ("/", div),
+            ("<", lt),
+            ("if", op_if),
+            ("def", op_def),
+            ("puts", puts),
+            ("pop", pop),
+            ("dup", dup),
+            ("exch", exch),
+            // ("index", index),
+        ];
         Self {
             stack: vec![],
-            vars: HashMap::new(),
+            // vars: HashMap::new(),
+            vars: functions
+                .into_iter()
+                .map(|(name, fun)| (name.to_owned(), Value::Native(NativeOp(fun))))
+                .collect(),
             blocks: vec![],
         }
     }
@@ -34,41 +53,65 @@ fn eval(code: Value, vm: &mut Vm) {
         top_block.push(code);
         return;
     }
-    match code {
-        Value::Op(ref op) => match op as &str {
-            // Value::Op(op) => match op as &str {
-            "+" => add(&mut vm.stack),
-            "-" => sub(&mut vm.stack),
-            "*" => mul(&mut vm.stack),
-            "<" => lt(&mut vm.stack),
-            "if" => op_if(vm),
-            "def" => op_def(vm),
-            "puts" => puts(vm),
-            _ => {
-                let val = vm
-                    .vars
-                    .get(op)
-                    .expect(&format!("{op:?} is not a defined operation"));
-                vm.stack.push(val.clone())
+    if let Value::Op(ref op) = code {
+        let val = vm
+            .vars
+            .get(op)
+            .expect(&format!("{op:?} is not a defined operation"))
+            .clone();
+
+        match val {
+            Value::Block(block) => {
+                for code in block {
+                    eval(code, vm);
+                }
             }
-        },
-        _ => vm.stack.push(code.clone()),
+            Value::Native(op) => op.0(vm),
+            _ => vm.stack.push(val),
+        }
+    } else {
+        vm.stack.push(code.clone());
     }
+}
+
+// duplicate: スタックの最上にある値を複製し push.
+// a b c => a b c c
+fn dup(vm: &mut Vm) {
+    let value = vm.stack.last().unwrap();
+    vm.stack.push(value.clone());
+}
+
+// exchange: スタックの最上位の 2 つの値を交換する。
+// a b c => a c b
+fn exch(vm: &mut Vm) {
+    // b
+    let last = vm.stack.pop().unwrap();
+    // c
+    let second = vm.stack.pop().unwrap();
+    // c
+    vm.stack.push(last);
+    // b
+    vm.stack.push(second);
 }
 
 // https://doc.rust-lang.org/reference/macros-by-example.html
 macro_rules! impl_op {
     {$name:ident, $op:tt} => {
-        fn $name(stack: &mut Vec<Value>) {
-            let rhs = stack.pop().unwrap().as_num();
-            let lhs = stack.pop().unwrap().as_num();
-            stack.push(Value::Num((lhs $op rhs) as i32))
+        fn $name(vm: &mut Vm) {
+            let rhs = vm.stack.pop().unwrap().as_num();
+            let lhs = vm.stack.pop().unwrap().as_num();
+            vm.stack.push(Value::Num((lhs $op rhs) as i32))
         }
     }
 }
+impl_op!(add, +);
 impl_op!(sub, -);
 impl_op!(mul, *);
 impl_op!(lt, <);
+
+fn pop(vm: &mut Vm) {
+    vm.stack.pop().unwrap();
+}
 
 // fn op_if(stack: &mut Vec<Value>) {
 fn op_if(vm: &mut Vm) {
@@ -122,6 +165,33 @@ enum Value {
     // ネストされたブロック（？）
     // { } とかで囲まれたところを表す。
     Block(Vec<Value>),
+    Native(NativeOp),
+}
+
+// newtype パターン
+// 関数ポインタを中身に持つタプル構造体。
+// 関数ポインタに対する Debug, PartialEq, Eq トレイトを derive 属性で自動的に定義できないから！
+// ↑ Orphan rule
+// newtype パターンにおいては, value.0 で中身にアクセスする必要がある。
+#[derive(Clone)]
+struct NativeOp(fn(&mut Vm));
+
+impl PartialEq for NativeOp {
+    fn eq(&self, other: &NativeOp) -> bool {
+        // *const は生ポインタで、安全性は保証されていない。
+        self.0 as *const fn() == other.0 as *const fn()
+    }
+}
+
+impl Eq for NativeOp {}
+
+// あれ、今なんでこの Debug トレイトを実装する必要があったんだっけ？
+// Value が実装してるトレイトだからか、
+// https://doc.rust-lang.org/std/fmt/trait.Debug.html
+impl std::fmt::Debug for NativeOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<NativeOp>")
+    }
 }
 
 impl Value {
@@ -145,6 +215,7 @@ impl Value {
             Self::Num(i) => i.to_string(),
             Self::Op(ref s) | Self::Sym(ref s) => s.clone(),
             Self::Block(_) => "<Block>".to_string(),
+            Self::Native(_) => "<Native>".to_string(),
         }
     }
 
@@ -161,11 +232,11 @@ fn puts(vm: &mut Vm) {
     println!("{}", value.to_string());
 }
 
-fn add(stack: &mut Vec<Value>) {
-    let rhs = stack.pop().unwrap().as_num();
-    let lhs = stack.pop().unwrap().as_num();
-    stack.push(Value::Num(lhs + rhs));
-}
+// fn add(stack: &mut Vec<Value>) {
+//     let rhs = stack.pop().unwrap().as_num();
+//     let lhs = stack.pop().unwrap().as_num();
+//     stack.push(Value::Num(lhs + rhs));
+// }
 
 // example 1
 // input: 3 1 + { 3 1 + }
@@ -192,14 +263,13 @@ fn sec2p5() {
     // }
 }
 
-fn parse_batch(source: impl BufRead) -> Vec<Value> {
+fn parse_batch(source: impl BufRead) {
     let mut vm = Vm::new();
     for line in source.lines().flatten() {
         for word in line.split(" ") {
             parse_word(word, &mut vm);
         }
     }
-    vm.stack
 }
 
 fn parse_interactive() {
@@ -209,6 +279,7 @@ fn parse_interactive() {
             parse_word(word, &mut vm);
         }
         println!("stack: {:?}", vm.stack);
+        println!("vars: {:?}", vm.vars);
     }
 }
 
