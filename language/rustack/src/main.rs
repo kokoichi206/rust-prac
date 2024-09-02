@@ -13,7 +13,7 @@ use std::{
 #[derive(Debug, Clone, PartialEq, Eq)] // トレイトの継承
 struct Vm {
     stack: Vec<Value>,
-    vars: HashMap<String, Value>,
+    vars: Vec<HashMap<String, Value>>,
     // 波括弧によるブロック定義の進捗を表す！
     blocks: Vec<Vec<Value>>,
 }
@@ -38,12 +38,19 @@ impl Vm {
         Self {
             stack: vec![],
             // vars: HashMap::new(),
-            vars: functions
+            vars: vec![functions
                 .into_iter()
                 .map(|(name, fun)| (name.to_owned(), Value::Native(NativeOp(fun))))
-                .collect(),
+                .collect()],
             blocks: vec![],
         }
+    }
+
+    fn find_var(&self, name: &str) -> Option<Value> {
+        self.vars
+            .iter()
+            .rev()
+            .find_map(|vars| vars.get(name).map(|var| var.to_owned()))
     }
 }
 
@@ -55,18 +62,24 @@ fn eval(code: Value, vm: &mut Vm) {
     }
     if let Value::Op(ref op) = code {
         let val = vm
-            .vars
-            .get(op)
-            .expect(&format!("{op:?} is not a defined operation"))
-            .clone();
+        .find_var(op)
+        .expect(&format!("{op:?} is not a defined operation"));
+            // .get(op)
+            // .expect(&format!("{op:?} is not a defined operation"))
+            // .clone();
 
         match val {
             Value::Block(block) => {
+                vm.vars.push(HashMap::new());
                 for code in block {
+                    // print
                     println!("{:?}", vm.stack);
+                    println!("{:?}", vm.vars);
+                    // println!("{:?}", vm.blocks);
                     println!("{:?}", code);
                     eval(code, vm);
                 }
+                vm.vars.pop();
             }
             Value::Native(op) => op.0(vm),
             _ => vm.stack.push(val),
@@ -153,12 +166,12 @@ fn op_if(vm: &mut Vm) {
 // /x 50
 // /x 50 def
 fn op_def(vm: &mut Vm) {
-    let value = vm.stack.pop().unwrap();
+    let value: Value = vm.stack.pop().unwrap();
     eval(value, vm);
     let value = vm.stack.pop().unwrap();
     let sym = vm.stack.pop().unwrap().as_sym().to_string();
 
-    vm.vars.insert(sym, value);
+    vm.vars.last_mut().unwrap().insert(sym, value);
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)] // トレイトの継承
@@ -167,6 +180,7 @@ enum Value {
     Num(i32),
     // 演算子。
     Op(String),
+    // Symbol 変数。
     Sym(String),
     // ネストされたブロック（？）
     // { } とかで囲まれたところを表す。

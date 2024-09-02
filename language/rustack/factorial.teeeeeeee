@@ -1,0 +1,20 @@
+/factorial { 1 factorial_int } def
+
+/factorial_int {
+// スタック最上位の値に名前をつけて記憶するための常套句。
+    /acc exch def
+    /n exch def
+    { n 2 < }
+    { acc }
+    {
+        n 1 -
+        acc n *
+        factorial_int
+    }
+    if
+} def
+
+// 4 1 1 1 1 1 10 factorial + + + + + + puts
+
+10 factorial puts
+
