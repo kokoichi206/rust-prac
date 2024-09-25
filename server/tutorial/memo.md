@@ -23,4 +23,7 @@ diesel migration generate create_adopts
 
 diesel migration run
 diesel migration revert
+
+
+cargo init
 ```
