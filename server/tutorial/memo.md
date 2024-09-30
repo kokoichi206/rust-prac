@@ -27,3 +27,11 @@ diesel migration revert
 
 cargo init
 ```
+
+マクロの確認
+
+``` sh
+cargo install cargo-expand
+
+cargo expand
+```

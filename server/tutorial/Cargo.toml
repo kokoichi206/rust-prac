@@ -8,6 +8,7 @@ edition = "2021"
 diesel = { version = "1.4.4", features = ["postgres", "chrono"] }
 dotenv = "0.15.0"
 chrono = "0.4"
+actix-web = "4"
 
 [lib]
 name = "webapi_mvp"

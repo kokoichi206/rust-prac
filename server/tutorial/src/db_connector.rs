@@ -133,6 +133,7 @@ mod unit_DB_test {
             // Assert
             let project = &projects[0];
             assert_eq!(tech.name, tech_name);
+            assert_eq!(tech.url_name, tech_url_name);
             assert_eq!(tech.image_url, tech_image_url);
             assert_eq!(project.name, project_name);
             assert_eq!(project.url_name, project_url_name);
