@@ -10,12 +10,15 @@ use crate::{
 async fn get_technology_page(tech_name: web::Path<String>) -> impl Responder {
     let conn = db_connector::create_connection();
     let path = tech_name.to_string();
-    let (tech, projects) =
-        db_connector::get_technology_page_by_url_name(&conn, &path).expect("NOT FOUND!");
+    let (tech, projects) = match db_connector::get_technology_page_by_url_name(&conn, &path) {
+        Ok(result) => result,
+        Err(_) => return HttpResponse::NotFound().finish(),
+    };
 
-    let contents = render_technology_page(tech, projects).expect("Internal Server Error");
-
-    HttpResponse::Ok().content_type("text/html").body(contents)
+    match render_technology_page(tech, projects) {
+        Ok(contents) => HttpResponse::Ok().content_type("text/html").body(contents),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
 }
 
 #[get("/health")]
