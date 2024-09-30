@@ -1,6 +1,10 @@
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use tera::{Context, Tera};
 
-use crate::db_connector;
+use crate::{
+    db_connector,
+    models::{Project, Technology},
+};
 
 #[get("/technologies/{tech_name}")]
 async fn get_technology_page(tech_name: web::Path<String>) -> impl Responder {
@@ -9,9 +13,9 @@ async fn get_technology_page(tech_name: web::Path<String>) -> impl Responder {
     let (tech, projects) =
         db_connector::get_technology_page_by_url_name(&conn, &path).expect("NOT FOUND!");
 
-    HttpResponse::Ok()
-        .content_type("text/html")
-        .body(tech.name)
+    let contents = render_technology_page(tech, projects).expect("Internal Server Error");
+
+    HttpResponse::Ok().content_type("text/html").body(contents)
 }
 
 #[get("/health")]
@@ -26,4 +30,14 @@ pub async fn create_app(addr: &str, port: u16) -> std::io::Result<()> {
         .bind((addr, port))?
         .run()
         .await
+}
+
+fn render_technology_page(tech: Technology, projects: Vec<Project>) -> Result<String, tera::Error> {
+    let tmpl = Tera::new("templates/**/*").unwrap();
+    let mut ctx = Context::new();
+
+    ctx.insert("tech", &tech);
+    ctx.insert("projects", &projects);
+
+    tmpl.render("tech_page.html", &ctx)
 }
