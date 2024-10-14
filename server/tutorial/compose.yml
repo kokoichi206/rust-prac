@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16.4
+    restart: always
+    environment:
+      POSTGRES_USER: postgres_user
+      POSTGRES_PASSWORD: postgres_pass
+      POSTGRES_DB: rust_mvp
+    ports:
+      - 9988:5432
+
+  server:
+    build:
+      context: .
+      target: server
+    ports:
+      - "9911:9911"
+    volumes:
+      - .:/usr/src/myapp/
+    command: >
+      /bin/sh -c "
+          cargo build --release &&
+          cargo run --release
+      "
+
+  client:
+    build:
+      context: .
+      # multi stage ビルド以外で target とかいう感じで指定できるんだ。。
+      target: client
+    depends_on:
+      - server
+    volumes:
+      - ./e2e:/usr/src/myapp/
+    command: >
+      /bin/sh -c "
+          wait-for-it -t 0 server:9911 &&
+          cargo test --test e2e_test
+      "
+
+  selenium-chrome:
+    # https://hub.docker.com/r/seleniarm/standalone-chromium/tags
+    image: seleniarm/standalone-chromium:latest
+    logging:
+      driver: none
+    ports:
+      - "4444:4444"
+      - "5900:5900"
