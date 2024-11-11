@@ -1,0 +1,10 @@
+[package]
+name = "book-manager"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.75"
+axum = { version = "0.7.5", features = ["macros"] }
+sqlx = { version = "0.7.3", features = ["runtime-tokio", "uuid", "macros", "postgres", "migrate"] }
+tokio = { version = "1.37.0", features = ["full"] }
